@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy::sprite::{MaterialMesh2dBundle, Mesh2dHandle};
-use bevy::window::WindowResized;
+use bevy::window::{WindowMode, WindowResized};
 use bevy_rapier2d::prelude::*;
 
 const SIZE: f32 = 1024.0;
@@ -10,13 +10,7 @@ use bevy::render::camera::ScalingMode;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: String::from("Bounce Simulator"),
-                ..Default::default()
-            }),
-            ..Default::default()
-        }))
+        .add_plugins(DefaultPlugins)
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(256.0))
         .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .insert_resource(RapierConfiguration {
@@ -27,6 +21,7 @@ fn main() {
         .add_systems(FixedUpdate, player_movement_system)
         .add_systems(Update, on_resize_system)
         .add_systems(Update, change_color)
+        .add_systems(Update, bevy::window::close_on_esc)
         .run();
 }
 
@@ -37,6 +32,7 @@ struct Player {
     forward_force: f32,
     /// torque exterted, N.m
     max_torque: f32,
+    colored: bool,
 }
 
 #[derive(Component, Default)]
@@ -47,8 +43,10 @@ struct Ball {
 
 #[derive(Resource)]
 struct ColorHandles {
-    red: Handle<ColorMaterial>,
-    white: Handle<ColorMaterial>,
+    player_white: Handle<Image>,
+    player_red: Handle<Image>,
+    ball_white: Handle<ColorMaterial>,
+    ball_red: Handle<ColorMaterial>,
 }
 
 fn setup(
@@ -56,8 +54,13 @@ fn setup(
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut windows: Query<&mut Window>,
 ) {
-    let player_handle = asset_server.load("player.png");
+    let mut window = windows.single_mut();
+    window.mode = WindowMode::BorderlessFullscreen;
+
+    let player_white = asset_server.load("player_white.png");
+    let player_red = asset_server.load("player_red.png");
 
     let mut bundle = Camera2dBundle::default();
     bundle.projection.scaling_mode = ScalingMode::AutoMin {
@@ -70,18 +73,21 @@ fn setup(
     let red = materials.add(ColorMaterial::from(Color::rgb_u8(255, 0, 0)));
 
     commands.insert_resource(ColorHandles {
-        white: white.clone(),
-        red,
+        player_white: player_white.clone(),
+        player_red,
+        ball_white: white.clone(),
+        ball_red: red,
     });
 
     commands.spawn((
         SpriteBundle {
-            texture: player_handle,
+            texture: player_white,
             ..default()
         },
         Player {
             max_torque: 0.02,
             forward_force: 50.0,
+            colored: false,
         },
         RigidBody::Dynamic,
         Collider::ball(64.0),
@@ -264,17 +270,24 @@ fn player_movement_system(
 
 fn change_color(
     mut events: EventReader<CollisionEvent>,
-    mut query: Query<(&mut Handle<ColorMaterial>, &mut Ball)>,
+    mut player_query: Query<(&mut Handle<Image>, &mut Player)>,
+    mut ball_query: Query<(&mut Handle<ColorMaterial>, &mut Ball)>,
     handles: Res<ColorHandles>,
 ) {
     for event in events.read() {
         if let CollisionEvent::Started(e1, e2, _) = event {
             for e in [e1, e2] {
-                if let Ok((mut handle, mut ball)) = query.get_mut(*e) {
+                if let Ok((mut handle, mut ball)) = ball_query.get_mut(*e) {
                     ball.colored = !ball.colored;
                     *handle = match ball.colored {
-                        false => handles.white.clone(),
-                        true => handles.red.clone(),
+                        false => handles.ball_white.clone(),
+                        true => handles.ball_red.clone(),
+                    };
+                } else if let Ok((mut handle, mut player)) = player_query.get_mut(*e) {
+                    player.colored = !player.colored;
+                    *handle = match player.colored {
+                        false => handles.player_white.clone(),
+                        true => handles.player_red.clone(),
                     };
                 }
             }
