@@ -1,16 +1,33 @@
 <!doctype html>
 <html lang="en">
 
-<body style="margin: 0px;">
-  <script type="module">
-    import init from './bounce_simulator.js'
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
 
-    init().catch((error) => {
-      if (!error.message.startsWith("Using exceptions for control flow, don't mind me. This isn't actually an error!")) {
-        throw error;
-      }
-    });
-  </script>
+<head>
+    <style>
+        body {
+            margin: 0px;
+            display: flex;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        canvas {
+            touch-action: none;
+        }
+    </style>
+</head>
+
+<body>
+    <script type="module">
+        import init from './bounce_simulator.js'
+
+        init().catch((error) => {
+            if (!error.message.startsWith("Using exceptions for control flow, don't mind me. This isn't actually an error!")) {
+                throw error;
+            }
+        });
+    </script>
 </body>
 
 </html>

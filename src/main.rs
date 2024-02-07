@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy::sprite::{MaterialMesh2dBundle, Mesh2dHandle};
-use bevy::window::{WindowMode, WindowResized};
+use bevy::window::{PresentMode, WindowResized};
 use bevy_rapier2d::prelude::*;
 
 const SIZE: f32 = 1024.0;
@@ -10,7 +10,14 @@ use bevy::render::camera::ScalingMode;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                present_mode: PresentMode::AutoNoVsync, // Reduces input lag.
+                fit_canvas_to_parent: true,
+                ..default()
+            }),
+            ..default()
+        }))
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(256.0))
         .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .insert_resource(RapierConfiguration {
@@ -21,7 +28,6 @@ fn main() {
         .add_systems(FixedUpdate, player_movement_system)
         .add_systems(Update, on_resize_system)
         .add_systems(Update, change_color)
-        .add_systems(Update, bevy::window::close_on_esc)
         .run();
 }
 
@@ -54,11 +60,7 @@ fn setup(
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    mut windows: Query<&mut Window>,
 ) {
-    let mut window = windows.single_mut();
-    window.mode = WindowMode::BorderlessFullscreen;
-
     let player_white = asset_server.load("player_white.png");
     let player_red = asset_server.load("player_red.png");
 
