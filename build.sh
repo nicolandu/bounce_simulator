@@ -11,3 +11,4 @@ wasm-bindgen --no-typescript --target web \
 wasm-opt -Oz -o ./out/bounce_simulator_bg.wasm ./out/bounce_simulator_bg.wasm
 cp -a ./assets/ ./out/
 cp index.html ./out/
+mv ./out ./docs
